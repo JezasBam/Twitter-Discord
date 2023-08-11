@@ -5,6 +5,7 @@ import config
 import requests
 import os
 import asyncio
+from colorama import Fore, Style  # Importă modulele necesare
 
 # Authenticate for Twitter
 try:
@@ -43,6 +44,7 @@ async def async_main():
     save_current_values(previous_values_file, coin_values)
 
     print("Process completed successfully!")
+    print(f"{Fore.RED}Press Ctrl+C Again to Exit{Style.RESET_ALL}")  # Mesaj colorat în roșu la sfarsit
 
 @client.event
 async def on_ready():
@@ -137,4 +139,4 @@ async def send_discord_message(message):
 try:
     client.run(config.DISCORD_BOT_TOKEN)
 except KeyboardInterrupt:
-    print("Bot has been stopped by the user.")
+    print("\nBot has been stopped by the user.")
