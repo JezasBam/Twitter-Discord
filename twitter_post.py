@@ -1,21 +1,30 @@
 import tweepy
+from tweepy import TweepyException
 import discord
 import config
 import requests
 import os
-
-os.chdir('C:\Users\cscat\Desktop\md\twitter_post.py')
+import asyncio
 
 # Authenticate for Twitter
-authenticate = tweepy.OAuthHandler(config.TWITTER_API_KEY, config.TWITTER_API_SECRET_KEY)
-authenticate.set_access_token(config.TWITTER_ACCESS_TOKEN, config.TWITTER_ACCESS_TOKEN_SECRET)
-api = tweepy.API(authenticate, wait_on_rate_limit=True)
+try:
+    authenticate = tweepy.OAuthHandler(config.TWITTER_API_KEY, config.TWITTER_API_SECRET_KEY)
+    authenticate.set_access_token(config.TWITTER_ACCESS_TOKEN, config.TWITTER_ACCESS_TOKEN_SECRET)
+    api = tweepy.API(authenticate, wait_on_rate_limit=True)
+    print("Connected to Twitter API successfully!")
+except Exception as e:
+    print(f"Error connecting to Twitter API: {e}")
+    api = None
 
 # Initialize Discord client
 intents = discord.Intents.default()
 intents.typing = False
 intents.presences = False
 client = discord.Client(intents=intents)
+
+@client.event
+async def on_ready():
+    print(f"Connected to Discord API successfully as {client.user}!")
 
 # Get previous coin values
 def get_previous_values(file_name):
@@ -80,30 +89,42 @@ def post_on_twitter(twitter_post):
     try:
         api.update_status(twitter_post)
         print("Posted on Twitter successfully!")
-    except tweepy.TweepError as e:
+    except TweepyException as e:
         print(f"Error posting on Twitter: {e}")
+        print("Skipping Twitter posting.")
+    except Exception as e:
+        print(f"Error connecting to Twitter API: {e}")
+        print("Skipping Twitter posting.")
 
 # Discord post
 async def send_discord_message(message):
     for channel_id in config.DISCORD_CHANNEL_IDS:
         channel = client.get_channel(channel_id)
         if channel:
-            await channel.send(message)
-            print(f"Posted on Discord successfully in channel ID {channel_id}!")
-        else:
-            print(f"Channel with ID {channel_id} not found on Discord.")
-
-# ...
+            try:
+                await channel.send(message)
+                print(f"Posted on Discord successfully in channel ID {channel_id}!")
+            except discord.DiscordException as e:
+                print(f"Error posting on Discord: {e}")
+                print(f"Skipping Discord posting in channel ID {channel_id}.")
 
 # Main function
-async def main():
+async def async_main():
     previous_values_file = 'previous_values.txt'
     previous_values = get_previous_values(previous_values_file)
     coin_values = get_coin_values()
     twitter_post = format_posts(coin_values, previous_values)
 
-    post_on_twitter(twitter_post)
-    await send_discord_message(twitter_post)  # Aici folosim await pentru a aștepta finalizarea
+    try:
+        post_on_twitter(twitter_post)
+    except TweepyException as e:
+        print(f"Error posting on Twitter: {e}")
+        print("Skipping Twitter posting.")
+    except Exception as e:
+        print(f"Error connecting to Twitter API: {e}")
+        print("Skipping Twitter posting.")
+
+    await send_discord_message(twitter_post)
 
     save_current_values(previous_values_file, coin_values)
 
@@ -111,5 +132,6 @@ async def main():
 
 # Run the main function
 if __name__ == "__main__":
-    client.loop.run_until_complete(main())  # Folosim loop-ul clientului Discord pentru a rula funcția asincronă
+    if api is not None:
+        asyncio.run(async_main())
     client.run(config.DISCORD_BOT_TOKEN)
