@@ -22,9 +22,32 @@ intents.typing = False
 intents.presences = False
 client = discord.Client(intents=intents)
 
+# Main function
+async def async_main():
+    previous_values_file = 'previous_values.txt'
+    previous_values = get_previous_values(previous_values_file)
+    coin_values = get_coin_values()
+    twitter_post = format_posts(coin_values, previous_values)
+
+    try:
+        post_on_twitter(twitter_post)
+    except TweepyException as e:
+        print(f"Error posting on Twitter: {e}")
+        print("Skipping Twitter posting.")
+    except Exception as e:
+        print(f"Error connecting to Twitter API: {e}")
+        print("Skipping Twitter posting.")
+
+    await send_discord_message(twitter_post)
+
+    save_current_values(previous_values_file, coin_values)
+
+    print("Process completed successfully!")
+
 @client.event
 async def on_ready():
     print(f"Connected to Discord API successfully as {client.user}!")
+    await async_main()
 
 # Get previous coin values
 def get_previous_values(file_name):
@@ -105,33 +128,13 @@ async def send_discord_message(message):
                 await channel.send(message)
                 print(f"Posted on Discord successfully in channel ID {channel_id}!")
             except discord.DiscordException as e:
-                print(f"Error posting on Discord: {e}")
-                print(f"Skipping Discord posting in channel ID {channel_id}.")
+                print(f"Error posting on Discord in channel ID {channel_id}: {e}")
+        else:
+            print(f"Channel ID {channel_id} not found or bot doesn't have access.")
+    print("Message was sent to all specified Discord channels.")
 
-# Main function
-async def async_main():
-    previous_values_file = 'previous_values.txt'
-    previous_values = get_previous_values(previous_values_file)
-    coin_values = get_coin_values()
-    twitter_post = format_posts(coin_values, previous_values)
-
-    try:
-        post_on_twitter(twitter_post)
-    except TweepyException as e:
-        print(f"Error posting on Twitter: {e}")
-        print("Skipping Twitter posting.")
-    except Exception as e:
-        print(f"Error connecting to Twitter API: {e}")
-        print("Skipping Twitter posting.")
-
-    await send_discord_message(twitter_post)
-
-    save_current_values(previous_values_file, coin_values)
-
-    print("Process completed successfully!")
-
-# Run the main function
-if __name__ == "__main__":
-    if api is not None:
-        asyncio.run(async_main())
+# Run the Discord client
+try:
     client.run(config.DISCORD_BOT_TOKEN)
+except KeyboardInterrupt:
+    print("Bot has been stopped by the user.")
