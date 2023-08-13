@@ -1,3 +1,3 @@
 # Twitter-Discord
 
--Twitter / Discord Posts About Crypto
+-Twitter v2 / Discord Posts About Crypto ($EGLD & $ESTAR)
