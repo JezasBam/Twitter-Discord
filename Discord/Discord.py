@@ -40,8 +40,9 @@ def get_coin_values():
     r = requests.get('https://api.onedex.app/prices')
     data = r.json()
 
-    estar_data = next((item for item in data if item["identifier"] == "ESTAR-461bab"), None)
-    if estar_data:
+    if estar_data := next(
+        (item for item in data if item["identifier"] == "ESTAR-461bab"), None
+    ):
         price_usdc = float(estar_data['priceUsdc'])
         price_wegld = float(estar_data['priceWegld'])
         values.append((price_usdc, price_wegld))
@@ -86,12 +87,12 @@ def format_discord_message(coin_values):
         price_indicator_usd = ''
         price_indicator_eur = ''
 
-        if price_status == 'up':
-            price_indicator_usd = '🟢'
-            price_indicator_eur = '🟢'
-        elif price_status == 'down':
+        if price_status == 'down':
             price_indicator_usd = '🔴'
             price_indicator_eur = '🔴'
+        elif price_status == 'up':
+            price_indicator_usd = '🟢'
+            price_indicator_eur = '🟢'
         else:
             price_indicator_usd = '⏸️'
             price_indicator_eur = '⏸️'
@@ -104,10 +105,7 @@ def format_discord_message(coin_values):
             eur_str = f"{price_indicator_eur} {eur:.5f} **$wEGLD Swap** 🔄"
 
         if i < len(coin_names):
-            lines.append(f"\n{coin_names[i]}")
-            lines.append(f"  {usd_str}")
-            lines.append(f"  {eur_str}")
-
+            lines.extend((f"\n{coin_names[i]}", f"  {usd_str}", f"  {eur_str}"))
     lines.append("\n👀 **ᴜᴘᴅᴀᴛᴇꜱ ᴇᴠᴇʀʏ 6 ʜᴏᴜʀꜱ !**👀")
     return "\n".join(lines)
 
@@ -118,8 +116,7 @@ def format_discord_message(coin_values):
 # Discord message
 async def send_discord_message(message):
     for channel_id in config.DISCORD_CHANNEL_IDS:
-        channel = client.get_channel(channel_id)
-        if channel:
+        if channel := client.get_channel(channel_id):
             try:
                 await channel.send(message)
                 print(f"Posted on Discord successfully in channel ID {channel_id}!")
